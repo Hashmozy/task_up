@@ -29,42 +29,32 @@ export default async function WorkspacePage({
     redirect("/auth/login")
   }
 
-  // Get workspace
-  const { data: workspace, error: workspaceError } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("id", id)
-    .single()
+  // Parallelize initial checks
+  const [
+    { data: workspace, error: workspaceError },
+    { data: membership }
+  ] = await Promise.all([
+    supabase.from("workspaces").select("*").eq("id", id).single(),
+    supabase.from("workspace_members").select("role").eq("workspace_id", id).eq("user_id", user.id).single()
+  ])
 
-  if (workspaceError || !workspace) {
-    redirect("/dashboard")
-  }
-
-  // Check if user is a member and get their role
-  const { data: membership } = await supabase
-    .from("workspace_members")
-    .select("role")
-    .eq("workspace_id", id)
-    .eq("user_id", user.id)
-    .single()
-
-  if (!membership) {
+  if (workspaceError || !workspace || !membership) {
     redirect("/dashboard")
   }
 
   const isAdmin = membership.role === "owner" || membership.role === "admin"
   const isOwner = membership.role === "owner"
 
-  // Fetch analytics data
-  const analytics = await getWorkspaceAnalytics(id)
-
-  // Fetch project stats
-  const projectStats = await getWorkspaceProjectStats(id)
-
-  // Fetch members
-  const { data: membersData } = await supabase
-    .from("workspace_members")
-    .select(`
+  // Parallelize remaining data fetching
+  const [
+    analytics,
+    projectStats,
+    { data: membersData },
+    { data: projects }
+  ] = await Promise.all([
+    getWorkspaceAnalytics(id),
+    getWorkspaceProjectStats(id),
+    supabase.from("workspace_members").select(`
       id,
       role,
       user_id,
@@ -73,8 +63,9 @@ export default async function WorkspacePage({
         email,
         avatar_url
       )
-    `)
-    .eq("workspace_id", id)
+    `).eq("workspace_id", id),
+    supabase.from("projects").select("id").eq("workspace_id", id)
+  ])
 
   // Transform the data to match the expected type
   const members = membersData?.map((m: any) => ({
@@ -84,10 +75,8 @@ export default async function WorkspacePage({
     profiles: Array.isArray(m.profiles) ? m.profiles[0] : m.profiles,
   })) || []
 
-  // Fetch tasks for the workspace
-  const { data: projects } = await supabase.from("projects").select("id").eq("workspace_id", id)
+  // Fetch tasks separately as it depends on projects
   const projectIds = projects?.map((p) => p.id) || []
-  
   const { data: tasks } = await supabase
     .from("tasks")
     .select("*, project:projects(id, name), status:task_statuses(id, name, color)")

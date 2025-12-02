@@ -1,34 +1,23 @@
 import type React from "react"
-// ... existing code ...
+import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import { Toaster } from "@/components/ui/sonner"
+import { QueryProvider } from "@/components/providers/query-provider"
 
-// <CHANGE> Add fonts
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+})
 
-export const metadata = {
-  title: "Project Manager - SaaS",
-  description: "Collaborative project management tool for teams",
-  generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+})
+
+export const metadata: Metadata = {
+  title: "Task Up - Project Management",
+  description: "Manage your projects and tasks efficiently",
 }
 
 export default function RootLayout({
@@ -38,9 +27,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">
-        {children}
-        <Analytics />
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        <QueryProvider>
+          {children}
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   )

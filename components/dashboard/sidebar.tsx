@@ -14,7 +14,8 @@ import {
   FolderKanban,
   ListTodo,
   Users,
-  BarChart3
+  BarChart3,
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/lib/actions/auth"
@@ -104,6 +105,11 @@ export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
       label: "Tasks",
       icon: ListTodo,
       href: `/dashboard/tasks?workspace=${currentWorkspace?.id}`,
+    },
+    {
+      label: "Calendar",
+      icon: Calendar,
+      href: `/dashboard/calendar?workspace=${currentWorkspace?.id}`,
     },
     {
       label: "Members",
@@ -222,10 +228,10 @@ export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {workspaceLinks.map((link) => {
+                  const linkPath = link.href.split('?')[0]
                   const isActive = link.exact 
-                    ? pathname === link.href 
-                    : pathname.startsWith(link.href.split('?')[0]) && 
-                      (typeof window !== 'undefined' && window.location.search.includes(link.href.split('=')[1]))
+                    ? pathname === linkPath
+                    : pathname.startsWith(linkPath)
                   
                   return (
                     <SidebarMenuItem key={link.label}>
@@ -280,7 +286,6 @@ export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
         <SidebarRail />
       </ShadcnSidebar>
 
-      {/* Invite Modal */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent>
           <DialogHeader>

@@ -38,24 +38,14 @@ export default async function ProjectsPage({
     }
   }
 
-  // Get workspace
-  const { data: workspace, error: workspaceError } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("id", selectedWorkspaceId)
-    .single()
-
-  if (workspaceError || !workspace) {
-    redirect("/dashboard")
-  }
-
-  // Check if user is a member and get their role
-  const { data: membership } = await supabase
-    .from("workspace_members")
-    .select("role")
-    .eq("workspace_id", selectedWorkspaceId)
-    .eq("user_id", user.id)
-    .single()
+  // Get workspace and membership in parallel
+  const [
+    { data: workspace, error: workspaceError },
+    { data: membership }
+  ] = await Promise.all([
+    supabase.from("workspaces").select("*").eq("id", selectedWorkspaceId as string).single(),
+    supabase.from("workspace_members").select("role").eq("workspace_id", selectedWorkspaceId as string).eq("user_id", user.id).single()
+  ])
 
   if (!membership) {
     redirect("/dashboard")
@@ -64,7 +54,7 @@ export default async function ProjectsPage({
   const isAdmin = membership.role === "owner" || membership.role === "admin"
 
   // Fetch project stats
-  const projectStats = await getWorkspaceProjectStats(selectedWorkspaceId)
+  const projectStats = await getWorkspaceProjectStats(selectedWorkspaceId as string)
 
   return (
     <div className="flex flex-col h-full">
@@ -81,7 +71,7 @@ export default async function ProjectsPage({
         <div className="max-w-7xl mx-auto px-8 py-6">
           <WorkspaceProjects 
             projects={projectStats} 
-            workspaceId={selectedWorkspaceId} 
+            workspaceId={selectedWorkspaceId as string} 
             isAdmin={isAdmin} 
           />
         </div>
