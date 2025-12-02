@@ -22,12 +22,28 @@ interface Member {
   }
 }
 
-interface WorkspaceSettingsViewProps {
-  workspaceId: string
-  initialMembers: Member[]
+interface Workspace {
+  id: string
+  name: string
+  description: string | null
 }
 
-export function WorkspaceSettingsView({ workspaceId, initialMembers }: WorkspaceSettingsViewProps) {
+interface WorkspaceSettingsViewProps {
+  workspace: Workspace
+  initialMembers: Member[]
+  isOwner: boolean
+}
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+export function WorkspaceSettingsView({ workspace, initialMembers, isOwner }: WorkspaceSettingsViewProps) {
   const router = useRouter()
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [inviteEmail, setInviteEmail] = useState("")
@@ -49,7 +65,7 @@ export function WorkspaceSettingsView({ workspaceId, initialMembers }: Workspace
           avatar_url
         )
       `)
-      .eq("workspace_id", workspaceId)
+      .eq("workspace_id", workspace.id)
 
     if (data) {
       // @ts-ignore - Supabase types are tricky with joins
@@ -65,7 +81,7 @@ export function WorkspaceSettingsView({ workspaceId, initialMembers }: Workspace
     try {
       const { data, error } = await supabase.rpc("invite_user_to_workspace", {
         email_to_invite: inviteEmail,
-        workspace_id_to_join: workspaceId,
+        workspace_id_to_join: workspace.id,
       })
 
       if (error) throw error
@@ -81,15 +97,47 @@ export function WorkspaceSettingsView({ workspaceId, initialMembers }: Workspace
     }
   }
 
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+
+  const [workspaceName, setWorkspaceName] = useState(workspace.name)
+  const [workspaceDescription, setWorkspaceDescription] = useState(workspace.description || "")
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const handleUpdateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!workspaceName.trim()) return
+
+    setIsUpdating(true)
+    try {
+      const { error } = await supabase
+        .from("workspaces")
+        .update({ 
+          name: workspaceName,
+          description: workspaceDescription
+        })
+        .eq("id", workspace.id)
+
+      if (error) throw error
+
+      toast.success("Workspace updated")
+      router.refresh()
+    } catch (err) {
+      toast.error("Failed to update workspace")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const handleDeleteWorkspace = async () => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return
+    if (deleteConfirmation !== workspace.name) return
 
     setIsDeleting(true)
     try {
       const { error } = await supabase
         .from("workspaces")
         .delete()
-        .eq("id", workspaceId)
+        .eq("id", workspace.id)
 
       if (error) throw error
 
@@ -107,6 +155,45 @@ export function WorkspaceSettingsView({ workspaceId, initialMembers }: Workspace
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Workspace Settings</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>General Settings</CardTitle>
+          <CardDescription>Manage your workspace details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleUpdateWorkspace} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Workspace Name</Label>
+              <Input
+                id="name"
+                value={workspaceName}
+                onChange={(e) => setWorkspaceName(e.target.value)}
+                placeholder="My Workspace"
+                disabled={!isOwner || isUpdating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={workspaceDescription}
+                onChange={(e) => setWorkspaceDescription(e.target.value)}
+                placeholder="A brief description of your workspace"
+                disabled={!isOwner || isUpdating}
+              />
+            </div>
+            {isOwner && (
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            )}
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -155,19 +242,65 @@ export function WorkspaceSettingsView({ workspaceId, initialMembers }: Workspace
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="destructive" onClick={handleDeleteWorkspace} disabled={isDeleting}>
-            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Workspace
-          </Button>
-        </CardContent>
-      </Card>
+      {isOwner && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>Irreversible actions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+              <div>
+                <p className="font-medium text-destructive">Delete this workspace</p>
+                <p className="text-sm text-muted-foreground">
+                  Once you delete a workspace, there is no going back. Please be certain.
+                </p>
+              </div>
+              <Button variant="destructive" onClick={() => setIsDeleteOpen(true)}>
+                Delete Workspace
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Workspace</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the
+              <strong> {workspace.name}</strong> workspace and remove all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirm">
+                Type <strong>{workspace.name}</strong> to confirm
+              </Label>
+              <Input
+                id="confirm"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder={workspace.name}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteWorkspace}
+              disabled={deleteConfirmation !== workspace.name || isDeleting}
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete Workspace
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

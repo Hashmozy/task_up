@@ -1,20 +1,32 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useSearchParams } from "next/navigation"
+import { useTasks } from "@/lib/hooks/use-queries"
 import { TasksView } from "@/components/tasks/tasks-view"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LayoutGrid, List, Calendar } from "lucide-react"
 
-export default async function TasksPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default function TasksPage() {
+  const searchParams = useSearchParams()
+  const workspaceId = searchParams.get("workspace") || undefined
+  
+  const { data: tasks = [], isLoading, error } = useTasks(workspaceId)
 
-  // Get all tasks assigned to user
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("*, project:projects(id, name), status:task_statuses(id, name, color)")
-    .eq("assigned_to", user?.id)
-    .order("due_date", { ascending: true })
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-destructive">Error loading tasks</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -41,15 +53,15 @@ export default async function TasksPage() {
           </TabsList>
 
           <TabsContent value="list" className="flex-1 overflow-auto">
-            <TasksView tasks={tasks || []} viewType="list" />
+            <TasksView tasks={tasks} viewType="list" />
           </TabsContent>
 
           <TabsContent value="kanban" className="flex-1 overflow-auto">
-            <TasksView tasks={tasks || []} viewType="kanban" />
+            <TasksView tasks={tasks} viewType="kanban" />
           </TabsContent>
 
           <TabsContent value="calendar" className="flex-1 overflow-auto">
-            <TasksView tasks={tasks || []} viewType="calendar" />
+            <TasksView tasks={tasks} viewType="calendar" />
           </TabsContent>
         </Tabs>
       </div>

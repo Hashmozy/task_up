@@ -1,31 +1,43 @@
-import { createClient } from "@/lib/supabase/server"
-import { GlobalDashboard } from "@/components/dashboard/global-dashboard"
-import { getGlobalAnalytics } from "@/lib/workspace-analytics"
-import { redirect } from "next/navigation"
+"use client"
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
+import { useWorkspaces } from "@/lib/hooks/use-queries"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { Loader2, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default function DashboardPage() {
+  const router = useRouter()
+  const { data: workspaces, isLoading } = useWorkspaces()
 
-  if (!user) {
-    redirect("/auth/login")
+  useEffect(() => {
+    if (!isLoading && workspaces && workspaces.length > 0) {
+      // Redirect to the first workspace
+      router.replace(`/dashboard/workspaces/${workspaces[0].id}`)
+    }
+  }, [workspaces, isLoading, router])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
-  const analytics = await getGlobalAnalytics()
-
-  return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Overview of all your workspaces and projects
-        </p>
+  // If no workspaces, show empty state
+  if (workspaces && workspaces.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4">
+        <h2 className="text-2xl font-bold">Welcome to Task Up</h2>
+        <p className="text-muted-foreground">You don't have any workspaces yet.</p>
+        <Button onClick={() => router.push("/dashboard/workspaces/new")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Workspace
+        </Button>
       </div>
+    )
+  }
 
-      <GlobalDashboard analytics={analytics} />
-    </div>
-  )
+  return null // Redirecting...
 }

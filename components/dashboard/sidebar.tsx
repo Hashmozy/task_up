@@ -61,7 +61,7 @@ interface Workspace {
 export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
   const pathname = usePathname()
   const router = useRouter()
-  const currentWorkspace = workspaces[0]
+  const currentWorkspace = workspaces?.[0]
 
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
@@ -89,37 +89,41 @@ export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
     }
   }
 
+  if (!currentWorkspace) {
+    return null
+  }
+
   const workspaceLinks = [
     {
-      label: "Overview",
-      icon: BarChart3,
-      href: `/dashboard/workspaces/${currentWorkspace?.id}`,
+      label: "Dashboard",
+      icon: LayoutGrid,
+      href: `/dashboard/workspaces/${currentWorkspace.id}`,
       exact: true,
     },
     {
       label: "Projects",
       icon: FolderKanban,
-      href: `/dashboard/projects?workspace=${currentWorkspace?.id}`,
+      href: `/dashboard/projects?workspace=${currentWorkspace.id}`,
     },
     {
       label: "Tasks",
       icon: ListTodo,
-      href: `/dashboard/tasks?workspace=${currentWorkspace?.id}`,
+      href: `/dashboard/tasks?workspace=${currentWorkspace.id}`,
     },
     {
       label: "Calendar",
       icon: Calendar,
-      href: `/dashboard/calendar?workspace=${currentWorkspace?.id}`,
+      href: `/dashboard/calendar?workspace=${currentWorkspace.id}`,
     },
     {
       label: "Members",
       icon: Users,
-      href: `/dashboard/workspaces/${currentWorkspace?.id}?tab=members`,
+      href: `/dashboard/members?workspace=${currentWorkspace.id}`,
     },
     {
       label: "Settings",
       icon: Settings,
-      href: `/dashboard/settings?workspace=${currentWorkspace?.id}`,
+      href: `/dashboard/settings?workspace=${currentWorkspace.id}`,
     },
   ]
 
@@ -207,22 +211,6 @@ export function Sidebar({ workspaces }: { workspaces: Workspace[] }) {
         </SidebarHeader>
         
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
-                    <Link href="/dashboard">
-                      <LayoutGrid />
-                      <span>Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
           <SidebarGroup>
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarGroupContent>

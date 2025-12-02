@@ -40,10 +40,6 @@ export function WorkspaceTabs({ workspaceId, activeTab, children }: WorkspaceTab
           <ListTodo className="w-4 h-4" />
           <span className="hidden sm:inline">Tasks</span>
         </TabsTrigger>
-        <TabsTrigger value="members" className="gap-2">
-          <Users className="w-4 h-4" />
-          <span className="hidden sm:inline">Members</span>
-        </TabsTrigger>
         <TabsTrigger value="settings" className="gap-2">
           <Settings className="w-4 h-4" />
           <span className="hidden sm:inline">Settings</span>

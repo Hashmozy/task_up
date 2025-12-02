@@ -15,8 +15,9 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [user, setUser] = useState<any>(null)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
   const supabase = createClient()
-  const { data: workspaces = [], isLoading } = useWorkspaces()
+  const { data: workspaces = [], isLoading: isLoadingWorkspaces } = useWorkspaces()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user }, error }) => {
@@ -24,10 +25,11 @@ export default function DashboardLayout({
         redirect("/auth/login")
       }
       setUser(user)
+      setIsAuthChecking(false)
     })
   }, [supabase])
 
-  if (!user || isLoading) {
+  if (isAuthChecking || isLoadingWorkspaces || !user) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -37,7 +39,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar workspaces={workspaces || []} />
+      <Sidebar workspaces={workspaces} />
       <SidebarInset>
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           <TopNav user={user} />
